@@ -3,1132 +3,755 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tersesat di Hutan: Kisah Imran & Nadilla</title>
+    <title>Tersesat di Hutan: Imran & Nadilla Multiplayer</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <!-- Tone.js for Audio Effects -->
+    <!-- PeerJS for Real-time 2-Device WebRTC Multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Tone.js for Audio Synth -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
     <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        
-        .bg-pattern {
-            background-color: #0d1b1e;
-            background-image: radial-gradient(#1f3a3d 1px, transparent 1px);
-            background-size: 24px 24px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.2);
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.4);
-        }
-
-        canvas {
-            image-rendering: pixelated;
-        }
+        body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; user-select: none; }
+        .bg-pattern { background-color: #0b1319; background-image: radial-gradient(#1c2d37 1px, transparent 1px); background-size: 20px 20px; }
+        canvas { image-rendering: pixelated; touch-action: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
     </style>
 </head>
 <body class="bg-pattern text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
 
-    <!-- Top Navigation Header -->
-    <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 p-4 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
+    <!-- Header -->
+    <header class="bg-slate-900/90 border-b border-slate-800 p-4 sticky top-0 z-50 backdrop-blur">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-900/50">
-                    <i class="fa-solid font-bold fa-tree text-xl"></i>
+                <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-lg">
+                    <i class="fa-solid fa-tree text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="font-extrabold text-lg md:text-xl tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
+                    <h1 class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
                         Petualangan Hutan: Imran & Nadilla
                     </h1>
-                    <p class="text-xs text-slate-400">Multiplayer Survival & Family Journey</p>
+                    <p class="text-xs text-slate-400">2-Device Realtime WebRTC Multiplayer Survival</p>
                 </div>
             </div>
 
-            <div id="roomBadge" class="hidden md:flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 text-xs">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Room ID: <strong class="text-emerald-400" id="currentRoomId">FOREST-LOVE-2026</strong></span>
+            <div class="flex items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
+                <span id="connStatusDot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span id="connStatusText" class="text-slate-300">Menghubungkan ke Server Sinyal...</span>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Container -->
-    <main class="max-w-7xl mx-auto w-full p-4 md:p-6 flex-1 flex flex-col justify-center">
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto w-full p-4 flex-1 flex flex-col justify-center">
         
-        <!-- SECTION 1: LOBBY & ROOM SELECTION -->
-        <section id="lobbySection" class="w-full max-w-4xl mx-auto bg-slate-900/90 rounded-3xl border border-slate-800 p-6 md:p-10 shadow-2xl backdrop-blur">
-            <div class="text-center max-w-xl mx-auto mb-8">
+        <!-- SECTION 1: LOBBY & MULTI-DEVICE ROOM SYSTEM -->
+        <section id="lobbySection" class="w-full max-w-3xl mx-auto bg-slate-900/90 rounded-3xl border border-slate-800 p-6 md:p-8 shadow-2xl backdrop-blur">
+            <div class="text-center max-w-lg mx-auto mb-6">
                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/50">
-                    Lobby Multiplayer Local/Sync
+                    Sistem 2 Device (Beda HP / Laptop)
                 </span>
-                <h2 class="text-2xl md:text-3xl font-extrabold text-white mt-3">Pilih Karakter & Masuk Room</h2>
-                <p class="text-slate-400 text-sm mt-2">
-                    Kedua pemain (Suami & Istri) harus memilih peran mereka dan menekan **Siap / Ready** sebelum game bisa dimulai.
+                <h2 class="text-2xl font-extrabold text-white mt-2">Masuk Room Petualangan</h2>
+                <p class="text-slate-400 text-xs mt-1">
+                    Gunakan Kode Room yang sama pada HP 1 (Imran) dan HP 2 (Nadilla) untuk terhubung secara langsung melalui jaringan internet!
                 </p>
             </div>
 
-            <!-- Player Status Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                
-                <!-- Imran Card -->
-                <div id="imranCard" class="bg-slate-800/60 border-2 border-slate-700 hover:border-blue-500/50 transition-all rounded-2xl p-6 relative overflow-hidden group">
-                    <div class="absolute -right-6 -bottom-6 text-blue-500/10 text-8xl group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-person text-blue-500"></i>
-                    </div>
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-2xl font-bold">
-                            <i class="fa-solid fa-user-shield"></i>
-                        </div>
-                        <div>
-                            <span class="text-xs uppercase font-bold text-blue-400 tracking-wider">Peran: Suami</span>
-                            <h3 class="text-lg font-bold text-white">Muhammad Dede Imran</h3>
-                        </div>
-                    </div>
-                    <p class="text-xs text-slate-400 mb-6">Bertanggung jawab mengumpulkan kayu, batu, membangun tempat berlindung, dan melindungi keluarga.</p>
-                    
-                    <div class="flex items-center justify-between pt-4 border-t border-slate-700/60">
-                        <div class="flex items-center gap-2">
-                            <span id="imranStatusDot" class="w-3 h-3 rounded-full bg-slate-600"></span>
-                            <span id="imranStatusText" class="text-xs font-semibold text-slate-400">Belum Masuk</span>
-                        </div>
-                        <button id="btnJoinImran" onclick="selectCharacter('imran')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-lg shadow-blue-900/30 transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-right-to-bracket"></i> Main Sebagai Imran
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Nadilla Card -->
-                <div id="nadillaCard" class="bg-slate-800/60 border-2 border-slate-700 hover:border-pink-500/50 transition-all rounded-2xl p-6 relative overflow-hidden group">
-                    <div class="absolute -right-6 -bottom-6 text-pink-500/10 text-8xl group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-person-dress text-pink-500"></i>
-                    </div>
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-14 h-14 rounded-2xl bg-pink-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 text-2xl font-bold">
-                            <i class="fa-solid fa-heart"></i>
-                        </div>
-                        <div>
-                            <span class="text-xs uppercase font-bold text-pink-400 tracking-wider">Peran: Istri</span>
-                            <h3 class="text-lg font-bold text-white">Nadilla</h3>
-                        </div>
-                    </div>
-                    <p class="text-xs text-slate-400 mb-6">Bertanggung jawab meramu air bersih, memasak makanan, mengumpulkan buah, dan merawat anak.</p>
-                    
-                    <div class="flex items-center justify-between pt-4 border-t border-slate-700/60">
-                        <div class="flex items-center gap-2">
-                            <span id="nadillaStatusDot" class="w-3 h-3 rounded-full bg-slate-600"></span>
-                            <span id="nadillaStatusText" class="text-xs font-semibold text-slate-400">Belum Masuk</span>
-                        </div>
-                        <button id="btnJoinNadilla" onclick="selectCharacter('nadilla')" class="px-4 py-2 bg-pink-600 hover:bg-pink-500 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-lg shadow-pink-900/30 transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-right-to-bracket"></i> Main Sebagai Nadilla
-                        </button>
-                    </div>
-                </div>
-
+            <!-- Room Code Input Area -->
+            <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-center gap-3">
+                <div class="w-full sm:w-auto text-xs text-slate-400 font-bold whitespace-nowrap">KODE ROOM:</div>
+                <input id="roomInput" type="text" value="hutan-cinta-2026" placeholder="Masukkan Nama Room..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono text-emerald-400 focus:outline-none focus:border-emerald-500">
+                <button onclick="applyRoomCode()" class="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl text-slate-200 border border-slate-700 whitespace-nowrap">
+                    <i class="fa-solid fa-sync"></i> Set Room
+                </button>
             </div>
 
-            <!-- Start Game Control Area -->
-            <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 text-center flex flex-col md:flex-row items-center justify-between gap-4">
-                <div class="text-left">
-                    <div class="flex items-center gap-2 text-slate-300 font-semibold text-sm">
-                        <i class="fa-solid fa-circle-info text-emerald-400"></i> Status Kelayakan Game:
+            <!-- Role Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+                <!-- Imran -->
+                <div id="imranCard" class="bg-slate-800/60 border-2 border-slate-700 rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xl font-bold">
+                                <i class="fa-solid fa-user-shield"></i>
+                            </div>
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-blue-400 tracking-wider">Pemain 1 (Suami)</span>
+                                <h3 class="text-base font-bold text-white">Muhammad Dede Imran</h3>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">Tugas: Mengumpulkan Kayu, Batu, Berburu Daging, & Membangun Pondok.</p>
                     </div>
-                    <p id="roomStatusNotice" class="text-xs text-slate-500 mt-1">
-                        Membutuhkan Imran & Nadilla di dalam room agar tombol "Mulai" menjadi hijau.
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">
+                        <span id="imranStateBadge" class="text-xs font-semibold text-slate-400">Belum Terhubung</span>
+                        <button id="btnSelectImran" onclick="selectRole('imran')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg">
+                            Pilih Imran
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Nadilla -->
+                <div id="nadillaCard" class="bg-slate-800/60 border-2 border-slate-700 rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-12 h-12 rounded-xl bg-pink-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 text-xl font-bold">
+                                <i class="fa-solid fa-heart"></i>
+                            </div>
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-pink-400 tracking-wider">Pemain 2 (Istri)</span>
+                                <h3 class="text-base font-bold text-white">Nadilla</h3>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">Tugas: Meramu Air Bersih, Mengumpulkan Buah, & Merawat Anak/Bayi.</p>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">
+                        <span id="nadillaStateBadge" class="text-xs font-semibold text-slate-400">Belum Terhubung</span>
+                        <button id="btnSelectNadilla" onclick="selectRole('nadilla')" class="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs rounded-xl shadow-lg">
+                            Pilih Nadilla
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start Game Control -->
+            <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 text-center flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-left">
+                    <div class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-signal text-emerald-400"></i> Status Koneksi Room 2-Device:
+                    </div>
+                    <p id="roomNotice" class="text-xs text-amber-400 mt-1 font-medium">
+                        Menunggu Imran & Nadilla memilih peran pada perangkat masing-masing...
                     </p>
                 </div>
 
-                <div class="flex items-center gap-3 w-full md:w-auto">
-                    <button id="btnStartGame" disabled onclick="startGameplay()" class="w-full md:w-auto px-8 py-3.5 bg-slate-700 text-slate-400 cursor-not-allowed font-extrabold text-sm rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play"></i> Mulai Petualangan
-                    </button>
-                </div>
-            </div>
-
-            <!-- Quick Sync Guidance for 2 Tabs / Multi Window -->
-            <div class="mt-6 p-4 rounded-xl bg-emerald-950/30 border border-emerald-900/50 text-xs text-emerald-300 flex items-start gap-3">
-                <i class="fa-solid fa-lightbulb text-emerald-400 text-base mt-0.5"></i>
-                <div>
-                    <strong>Tips Bermain 2 Player:</strong> Anda bisa membuka tautan ini di 2 Tab terpisah pada browser yang sama. Pilih <em>Imran</em> di Tab 1, dan pilih <em>Nadilla</em> di Tab 2. Status akan otomatis tersinkronisasi realtime!
-                </div>
+                <button id="btnStartGame" disabled onclick="requestStartGame()" class="w-full sm:w-auto px-8 py-3.5 bg-slate-800 text-slate-500 cursor-not-allowed font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-xl">
+                    <i class="fa-solid fa-play mr-2"></i> Mulai Petualangan
+                </button>
             </div>
         </section>
 
-        <!-- SECTION 2: GAMEPLAY INTERFACE (HIDDEN BY DEFAULT) -->
+        <!-- SECTION 2: GAMEPLAY INTERFACE -->
         <section id="gameSection" class="hidden w-full flex-1 flex flex-col gap-4">
             
-            <!-- Top HUD & Life Bar -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                
-                <!-- Imran Vitals HUD -->
-                <div class="bg-slate-900/90 border border-blue-900/50 rounded-2xl p-4 flex flex-col gap-2 shadow-xl backdrop-blur">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span class="text-xs font-bold text-blue-400 flex items-center gap-2">
+            <!-- Vitals HUD -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <!-- Imran HUD -->
+                <div class="bg-slate-900/90 border border-blue-900/50 rounded-2xl p-3 shadow-xl backdrop-blur">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-1.5 mb-2">
+                        <span class="text-xs font-bold text-blue-400 flex items-center gap-1.5">
                             <i class="fa-solid fa-mars"></i> Imran (Suami)
                         </span>
-                        <span id="imranRoleLabel" class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800">P1</span>
+                        <span id="imranOwnerTag" class="text-[9px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">P1</span>
                     </div>
-                    
-                    <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2 text-[11px]">
                         <div>
-                            <div class="flex justify-between mb-1 text-[11px]"><span>Kesehatan</span><span id="imranHpText">100%</span></div>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div id="imranHpBar" class="h-full bg-red-500 transition-all duration-300" style="width: 100%;"></div>
+                            <div class="flex justify-between mb-0.5"><span>Darah</span><span id="imranHpText">100%</span></div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="imranHpBar" class="h-full bg-red-500 transition-all" style="width:100%"></div>
                             </div>
                         </div>
                         <div>
-                            <div class="flex justify-between mb-1 text-[11px]"><span>Kelaparan</span><span id="imranHungerText">100%</span></div>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div id="imranHungerBar" class="h-full bg-amber-500 transition-all duration-300" style="width: 100%;"></div>
+                            <div class="flex justify-between mb-0.5"><span>Lapar</span><span id="imranHungerText">100%</span></div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="imranHungerBar" class="h-full bg-amber-500 transition-all" style="width:100%"></div>
                             </div>
                         </div>
                         <div>
-                            <div class="flex justify-between mb-1 text-[11px]"><span>Kehausan</span><span id="imranThirstText">100%</span></div>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div id="imranThirstBar" class="h-full bg-cyan-500 transition-all duration-300" style="width: 100%;"></div>
+                            <div class="flex justify-between mb-0.5"><span>Haus</span><span id="imranThirstText">100%</span></div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="imranThirstBar" class="h-full bg-cyan-500 transition-all" style="width:100%"></div>
                             </div>
                         </div>
                         <div>
-                            <div class="flex justify-between mb-1 text-[11px]"><span>Kehangatan</span><span id="imranWarmthText">100%</span></div>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div id="imranWarmthBar" class="h-full bg-orange-500 transition-all duration-300" style="width: 100%;"></div>
+                            <div class="flex justify-between mb-0.5"><span>Kehangatan</span><span id="imranWarmthText">100%</span></div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="imranWarmthBar" class="h-full bg-orange-500 transition-all" style="width:100%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Environment & World Info -->
-                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between items-center text-center shadow-xl backdrop-blur">
+                <!-- World Status -->
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between items-center text-center shadow-xl backdrop-blur">
                     <div class="flex items-center gap-4">
-                        <div class="text-center">
-                            <div class="text-xs text-slate-400">Waktu Hutan</div>
-                            <div id="clockDisplay" class="text-lg font-black text-amber-400">08:00 Pagi</div>
+                        <div>
+                            <div class="text-[10px] text-slate-400">Waktu Hutan</div>
+                            <div id="clockDisplay" class="text-base font-black text-amber-400">08:00 Pagi</div>
                         </div>
-                        <div class="h-8 w-px bg-slate-800"></div>
-                        <div class="text-center">
-                            <div class="text-xs text-slate-400">Hari Perjalanan</div>
-                            <div id="dayDisplay" class="text-lg font-black text-emerald-400">Hari ke-1</div>
+                        <div class="h-6 w-px bg-slate-800"></div>
+                        <div>
+                            <div class="text-[10px] text-slate-400">Hari Survival</div>
+                            <div id="dayDisplay" class="text-base font-black text-emerald-400">Hari 1</div>
                         </div>
                     </div>
-
-                    <!-- Story Stage Badge -->
-                    <div class="mt-2 px-3 py-1 bg-emerald-950 border border-emerald-700/60 rounded-full text-xs text-emerald-300 font-semibold flex items-center gap-2">
+                    <div class="mt-2 px-3 py-1 bg-emerald-950/80 border border-emerald-800/80 rounded-full text-[11px] text-emerald-300 font-semibold flex items-center gap-1.5">
                         <i class="fa-solid fa-compass text-emerald-400"></i>
-                        <span id="storyStageText">Fase 1: Tersesat & Bertahan Hidup</span>
+                        <span id="storyStageText">Fase 1: Bertahan Hidup Awal</span>
                     </div>
                 </div>
 
-                <!-- Nadilla Vitals HUD -->
-                <div class="bg-slate-900/90 border border-pink-900/50 rounded-2xl p-4 flex flex-col gap-2 shadow-xl backdrop-blur">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span class="text-xs font-bold text-pink-400 flex items-center gap-2">
+                <!-- Nadilla HUD -->
+                <div class="bg-slate-900/90 border border-pink-900/50 rounded-2xl p-3 shadow-xl backdrop-blur">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-1.5 mb-2">
+                        <span class="text-xs font-bold text-pink-400 flex items-center gap-1.5">
                             <i class="fa-solid fa-venus"></i> Nadilla (Istri)
                         </span>
-                        <span id="nadillaRoleLabel" class="text-[10px] px-2 py-0.5 rounded bg-pink-950 text-pink-300 border border-pink-800">P2</span>
+                        <span id="nadillaOwnerTag" class="text-[9px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">P2</span>
                     </div>
-                    
-                    <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2 text-[11px]">
                         <div>
-                            <div class="flex justify-between mb-1 text-[11px]"><span>Kesehatan</span><span id="nadillaHpText">100%</span></div>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div id="nadillaHpBar" class="h-full bg-red-500 transition-all duration-300" style="width: 100%;"></div>
+                            <div class="flex justify-between mb-0.5"><span>Darah</span><span id="nadillaHpText">100%</span></div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="nadillaHpBar" class="h-full bg-red-500 transition-all" style="width:100%"></div>
                             </div>
                         </div>
                         <div>
-                            <div class="flex justify-between mb-1 text-[11px]"><span>Kelaparan</span><span id="nadillaHungerText">100%</span></div>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div id="nadillaHungerBar" class="h-full bg-amber-500 transition-all duration-300" style="width: 100%;"></div>
+                            <div class="flex justify-between mb-0.5"><span>Lapar</span><span id="nadillaHungerText">100%</span></div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="nadillaHungerBar" class="h-full bg-amber-500 transition-all" style="width:100%"></div>
                             </div>
                         </div>
                         <div>
-                            <div class="flex justify-between mb-1 text-[11px]"><span>Kehausan</span><span id="nadillaThirstText">100%</span></div>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div id="nadillaThirstBar" class="h-full bg-cyan-500 transition-all duration-300" style="width: 100%;"></div>
+                            <div class="flex justify-between mb-0.5"><span>Haus</span><span id="nadillaThirstText">100%</span></div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="nadillaThirstBar" class="h-full bg-cyan-500 transition-all" style="width:100%"></div>
                             </div>
                         </div>
                         <div>
-                            <div class="flex justify-between mb-1 text-[11px]"><span>Kehangatan</span><span id="nadillaWarmthText">100%</span></div>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div id="nadillaWarmthBar" class="h-full bg-orange-500 transition-all duration-300" style="width: 100%;"></div>
+                            <div class="flex justify-between mb-0.5"><span>Kehangatan</span><span id="nadillaWarmthText">100%</span></div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="nadillaWarmthBar" class="h-full bg-orange-500 transition-all" style="width:100%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
 
-            <!-- Canvas Display & Interactive Control Grid -->
+            <!-- Game Canvas & Sidebar -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1">
-                
-                <!-- Main Game World Canvas (3 Cols on Desktop) -->
-                <div class="lg:col-span-3 bg-slate-950 rounded-2xl border border-slate-800 relative overflow-hidden flex flex-col justify-center items-center shadow-2xl min-h-[420px]">
-                    <canvas id="gameCanvas" class="w-full h-full max-h-[580px] object-contain rounded-xl"></canvas>
-                    
-                    <!-- Touch Movement Overlay for Mobile -->
-                    <div class="absolute bottom-4 left-4 md:hidden flex flex-col gap-1 z-20 opacity-80 hover:opacity-100">
+                <!-- Canvas Display -->
+                <div class="lg:col-span-3 bg-slate-950 rounded-2xl border border-slate-800 relative overflow-hidden flex justify-center items-center shadow-2xl min-h-[400px]">
+                    <canvas id="gameCanvas" class="w-full h-full max-h-[550px] object-contain"></canvas>
+
+                    <!-- Mobile Virtual Controls -->
+                    <div class="absolute bottom-4 left-4 md:hidden flex flex-col gap-1 z-20">
                         <div class="flex justify-center">
-                            <button onclick="handleTouchMove('up')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex items-center justify-center text-white text-lg active:bg-slate-700">▲</button>
+                            <button onclick="handleMobileMove('up')" class="w-12 h-12 bg-slate-800/80 border border-slate-600 rounded-xl text-white font-bold active:bg-slate-700">▲</button>
                         </div>
                         <div class="flex gap-1">
-                            <button onclick="handleTouchMove('left')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex items-center justify-center text-white text-lg active:bg-slate-700">◄</button>
-                            <button onclick="handleTouchMove('down')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex items-center justify-center text-white text-lg active:bg-slate-700">▼</button>
-                            <button onclick="handleTouchMove('right')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex items-center justify-center text-white text-lg active:bg-slate-700">►</button>
+                            <button onclick="handleMobileMove('left')" class="w-12 h-12 bg-slate-800/80 border border-slate-600 rounded-xl text-white font-bold active:bg-slate-700">◄</button>
+                            <button onclick="handleMobileMove('down')" class="w-12 h-12 bg-slate-800/80 border border-slate-600 rounded-xl text-white font-bold active:bg-slate-700">▼</button>
+                            <button onclick="handleMobileMove('right')" class="w-12 h-12 bg-slate-800/80 border border-slate-600 rounded-xl text-white font-bold active:bg-slate-700">►</button>
                         </div>
                     </div>
-
-                    <!-- Touch Interact Button for Mobile -->
                     <div class="absolute bottom-4 right-4 md:hidden z-20">
-                        <button onclick="handleInteractAction()" class="w-16 h-16 bg-emerald-600 active:bg-emerald-500 border border-emerald-400 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-xl">
+                        <button onclick="handleInteractAction()" class="w-16 h-16 bg-emerald-600 border border-emerald-400 rounded-full text-white font-bold text-xl active:bg-emerald-500 shadow-lg flex items-center justify-center">
                             E
                         </button>
                     </div>
                 </div>
 
-                <!-- Right Sidebar: Inventory, Crafting, Quest Log -->
+                <!-- Sidebar Controls -->
                 <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl backdrop-blur">
-                    
-                    <!-- Tab Navigation -->
-                    <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-                        <button id="tabBtnInv" onclick="switchSidebarTab('inv')" class="flex-1 py-1.5 rounded-lg font-bold bg-emerald-600 text-white transition-all">Inventaris</button>
-                        <button id="tabBtnCraft" onclick="switchSidebarTab('craft')" class="flex-1 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all">Kerajinan</button>
-                        <button id="tabBtnStory" onclick="switchSidebarTab('story')" class="flex-1 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all">Misi</button>
+                    <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+                        <button id="btnTabInv" onclick="switchTab('inv')" class="flex-1 py-1.5 rounded-lg bg-emerald-600 text-white">Inventaris</button>
+                        <button id="btnTabCraft" onclick="switchTab('craft')" class="flex-1 py-1.5 rounded-lg text-slate-400">Kerajinan</button>
+                        <button id="btnTabStory" onclick="switchTab('story')" class="flex-1 py-1.5 rounded-lg text-slate-400">Misi</button>
                     </div>
 
-                    <!-- Tab 1: Inventory -->
-                    <div id="tabInvContent" class="flex-1 flex flex-col gap-3">
-                        <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider">Sumber Daya Bersama</h4>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 flex items-center gap-2">
-                                <i class="fa-solid fa-tree text-amber-600 text-base"></i>
-                                <div><div class="text-[10px] text-slate-400">Kayu</div><strong id="invWood" class="text-sm">0</strong></div>
+                    <!-- Inventory Panel -->
+                    <div id="panelInv" class="flex-1 flex flex-col gap-3 text-xs">
+                        <h4 class="font-bold text-slate-400 uppercase text-[10px]">Sumber Daya Bersama</h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-slate-800/60 p-2 rounded-xl border border-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-tree text-amber-600"></i>
+                                <div><div class="text-[9px] text-slate-400">Kayu</div><strong id="invWood">0</strong></div>
                             </div>
-                            <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 flex items-center gap-2">
-                                <i class="fa-solid fa-gem text-slate-400 text-base"></i>
-                                <div><div class="text-[10px] text-slate-400">Batu</div><strong id="invStone" class="text-sm">0</strong></div>
+                            <div class="bg-slate-800/60 p-2 rounded-xl border border-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-gem text-slate-400"></i>
+                                <div><div class="text-[9px] text-slate-400">Batu</div><strong id="invStone">0</strong></div>
                             </div>
-                            <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 flex items-center gap-2">
-                                <i class="fa-solid fa-apple-whole text-red-400 text-base"></i>
-                                <div><div class="text-[10px] text-slate-400">Buah Hutan</div><strong id="invBerries" class="text-sm">0</strong></div>
+                            <div class="bg-slate-800/60 p-2 rounded-xl border border-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-apple-whole text-red-400"></i>
+                                <div><div class="text-[9px] text-slate-400">Buah Beri</div><strong id="invBerries">0</strong></div>
                             </div>
-                            <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 flex items-center gap-2">
-                                <i class="fa-solid fa-bottle-water text-cyan-400 text-base"></i>
-                                <div><div class="text-[10px] text-slate-400">Air Bersih</div><strong id="invWater" class="text-sm">0</strong></div>
-                            </div>
-                            <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 flex items-center gap-2">
-                                <i class="fa-solid fa-drumstick-bite text-amber-700 text-base"></i>
-                                <div><div class="text-[10px] text-slate-400">Daging Makanan</div><strong id="invMeat" class="text-sm">0</strong></div>
-                            </div>
-                            <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 flex items-center gap-2">
-                                <i class="fa-solid fa-kit-medical text-emerald-400 text-base"></i>
-                                <div><div class="text-[10px] text-slate-400">Obat Herbal</div><strong id="invMedicine" class="text-sm">0</strong></div>
+                            <div class="bg-slate-800/60 p-2 rounded-xl border border-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-bottle-water text-cyan-400"></i>
+                                <div><div class="text-[9px] text-slate-400">Air Bersih</div><strong id="invWater">0</strong></div>
                             </div>
                         </div>
 
-                        <!-- Action Buttons -->
                         <div class="mt-auto flex flex-col gap-2 pt-2 border-t border-slate-800">
-                            <button onclick="consumeItem('berries')" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-xl text-slate-200 flex items-center justify-center gap-2">
+                            <button onclick="consumeItem('berries')" class="py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-200 font-semibold flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-utensils text-amber-400"></i> Makan Buah Beri (+15 Lapar)
                             </button>
-                            <button onclick="consumeItem('water')" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-xl text-slate-200 flex items-center justify-center gap-2">
+                            <button onclick="consumeItem('water')" class="py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-200 font-semibold flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-glass-water text-cyan-400"></i> Minum Air (+20 Haus)
                             </button>
-                            <button onclick="consumeItem('meat')" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-xl text-slate-200 flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-fire-burner text-amber-600"></i> Makan Daging (+35 Lapar)
-                            </button>
                         </div>
                     </div>
 
-                    <!-- Tab 2: Crafting -->
-                    <div id="tabCraftContent" class="hidden flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar max-h-[300px]">
-                        
-                        <!-- Craft Items List -->
-                        <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 flex items-center justify-between">
-                            <div>
-                                <h5 class="text-xs font-bold text-white">Api Unggun (Campfire)</h5>
-                                <p class="text-[10px] text-slate-400">Menjaga kehangatan malam. (5 Kayu, 2 Batu)</p>
-                            </div>
-                            <button onclick="craftStructure('campfire')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-lg text-white">Buat</button>
+                    <!-- Crafting Panel -->
+                    <div id="panelCraft" class="hidden flex-1 flex flex-col gap-2 text-xs overflow-y-auto custom-scrollbar max-h-[300px]">
+                        <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700 flex justify-between items-center">
+                            <div><strong class="text-white block">Api Unggun</strong><span class="text-[10px] text-slate-400">5 Kayu, 2 Batu</span></div>
+                            <button onclick="craft('campfire')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-bold">Buat</button>
                         </div>
-
-                        <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 flex items-center justify-between">
-                            <div>
-                                <h5 class="text-xs font-bold text-white">Penyaring Air (Filter)</h5>
-                                <p class="text-[10px] text-slate-400">Mengubah air sungai jadi bersih. (6 Batu, 4 Kayu)</p>
-                            </div>
-                            <button onclick="craftStructure('purifier')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-lg text-white">Buat</button>
+                        <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700 flex justify-between items-center">
+                            <div><strong class="text-white block">Gubuk Kayu</strong><span class="text-[10px] text-slate-400">20 Kayu, 10 Batu</span></div>
+                            <button onclick="craft('shelter')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-bold">Buat</button>
                         </div>
-
-                        <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 flex items-center justify-between">
-                            <div>
-                                <h5 class="text-xs font-bold text-white">Gubuk Kayu Kuat</h5>
-                                <p class="text-[10px] text-slate-400">Rumah berlindung keluarga. (20 Kayu, 10 Batu)</p>
-                            </div>
-                            <button onclick="craftStructure('shelter')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-lg text-white">Buat</button>
+                        <div id="craftCribBox" class="hidden bg-purple-900/40 p-2.5 rounded-xl border border-purple-700/60 flex justify-between items-center">
+                            <div><strong class="text-purple-200 block">Ranjang Bayi</strong><span class="text-[10px] text-purple-300">15 Kayu</span></div>
+                            <button onclick="craft('crib')" class="px-3 py-1 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-bold">Buat</button>
                         </div>
-
-                        <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 flex items-center justify-between">
-                            <div>
-                                <h5 class="text-xs font-bold text-white">Perangkap Hewan</h5>
-                                <p class="text-[10px] text-slate-400">Menangkap daging otomatis. (10 Kayu)</p>
-                            </div>
-                            <button onclick="craftStructure('trap')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-lg text-white">Buat</button>
+                        <div id="craftBeaconBox" class="hidden bg-amber-900/40 p-2.5 rounded-xl border border-amber-700/60 flex justify-between items-center">
+                            <div><strong class="text-amber-200 block">Suar Penyelamat</strong><span class="text-[10px] text-amber-300">30 Kayu, 25 Batu</span></div>
+                            <button onclick="craft('beacon')" class="px-3 py-1 bg-amber-600 hover:bg-amber-500 rounded-lg text-white font-bold">Buat</button>
                         </div>
-
-                        <div id="craftBabyCribContainer" class="hidden bg-purple-900/40 p-3 rounded-xl border border-purple-700/60 flex items-center justify-between">
-                            <div>
-                                <h5 class="text-xs font-bold text-purple-200">Ranjang Bayi (Child Crib)</h5>
-                                <p class="text-[10px] text-purple-300">Tempat aman untuk anak. (15 Kayu)</p>
-                            </div>
-                            <button onclick="craftStructure('crib')" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-xs font-bold rounded-lg text-white">Buat</button>
-                        </div>
-
-                        <div id="craftRescueBeaconContainer" class="hidden bg-amber-900/40 p-3 rounded-xl border border-amber-700/60 flex items-center justify-between">
-                            <div>
-                                <h5 class="text-xs font-bold text-amber-200">Menara Suar Penyelamat</h5>
-                                <p class="text-[10px] text-amber-300">Sinyal bantuan keluar hutan! (30 Kayu, 25 Batu)</p>
-                            </div>
-                            <button onclick="craftStructure('beacon')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-xs font-bold rounded-lg text-white">Buat</button>
-                        </div>
-
                     </div>
 
-                    <!-- Tab 3: Story Quest Log -->
-                    <div id="tabStoryContent" class="hidden flex-1 flex flex-col gap-2">
-                        <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider">Jurnal Petualangan Keluarga</h4>
-                        <div id="questLogContainer" class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs flex flex-col gap-2 font-medium">
-                            <!-- Quests injected via JS -->
-                        </div>
-
-                        <!-- Baby Care Status UI (Unlocked in Stage 3) -->
-                        <div id="babyCarePanel" class="hidden mt-2 p-3 bg-pink-950/40 border border-pink-800/60 rounded-xl">
-                            <div class="flex items-center gap-2 mb-2">
-                                <i class="fa-solid fa-baby text-pink-400"></i>
-                                <span class="text-xs font-bold text-pink-200">Kondisi Bayi Pasangan</span>
-                            </div>
-                            <div class="text-[11px] text-slate-300 flex justify-between mb-1">
-                                <span>Kenyamanan & Kesehatan:</span>
-                                <strong id="babyHealthText">100%</strong>
-                            </div>
+                    <!-- Story & Baby Panel -->
+                    <div id="panelStory" class="hidden flex-1 flex flex-col gap-2 text-xs">
+                        <div id="questContainer" class="bg-slate-950 p-3 rounded-xl border border-slate-800 leading-relaxed text-slate-300"></div>
+                        <div id="babyCareBox" class="hidden p-3 bg-pink-950/40 border border-pink-800/60 rounded-xl">
+                            <span class="font-bold text-pink-300 block mb-1">❤️ Kondisi Bayi Pasangan</span>
                             <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-2">
-                                <div id="babyHealthBar" class="h-full bg-pink-500 transition-all" style="width: 100%;"></div>
+                                <div id="babyHpBar" class="h-full bg-pink-500 transition-all" style="width:100%"></div>
                             </div>
-                            <button onclick="careForBaby()" class="w-full py-1.5 bg-pink-600 hover:bg-pink-500 text-xs font-bold rounded-lg text-white">
-                                <i class="fa-solid fa-heart"></i> Rawat & Peluk Bayi
+                            <button onclick="careBaby()" class="w-full py-1.5 bg-pink-600 hover:bg-pink-500 rounded-lg font-bold text-white text-xs">
+                                Peluk & Merawat Bayi (+20%)
                             </button>
                         </div>
                     </div>
-
                 </div>
-
             </div>
-
         </section>
-
     </main>
 
-    <!-- Footer -->
     <footer class="bg-slate-950 border-t border-slate-800 py-3 text-center text-xs text-slate-500">
-        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
-            <div>&copy; 2026 Game Survival Petualangan Imran & Nadilla. Full Fix Release.</div>
-            <div class="flex gap-4">
-                <span class="hover:text-slate-300 cursor-pointer" onclick="resetGameState()">Reset Progress</span>
-            </div>
-        </div>
+        &copy; 2026 Game Survival Imran & Nadilla. Full Fix Realtime PeerJS Multiplayer Engine.
     </footer>
 
-    <!-- GAME ENGINE & MULTIPLAYER SYNC SCRIPT -->
+    <!-- REAL-TIME PEERJS MULTIPLAYER & CANVAS SCRIPT -->
     <script>
-        /* ==========================================================================
-           1. GAME STATE & MULTIPLAYER BROADCAST CHANNEL SETUP
-           ========================================================================== */
-        const CHANNEL_NAME = 'FOREST_SURVIVAL_SYNC_CHANNEL';
-        const syncChannel = new BroadcastChannel(CHANNEL_NAME);
+        // PEERJS WEBRTC MULTIPLAYER SETUP
+        let peer = null;
+        let conn = null;
+        let roomCode = 'hutan-cinta-2026';
+        let myRole = null; // 'imran' or 'nadilla'
 
-        // Local Player Role Selection: null | 'imran' | 'nadilla'
-        let myRole = null; 
-        
-        // World & Room Synchronization State
         let gameState = {
-            room: {
-                imranJoined: false,
-                imranReady: false,
-                nadillaJoined: false,
-                nadillaReady: false,
-                gameStarted: false
-            },
-            world: {
-                day: 1,
-                timeMinutes: 480, // 8:00 AM (480 mins)
-                weather: 'clear', // 'clear', 'rain', 'cold'
-                stage: 1, // 1: Survival, 2: Shelter Base, 3: Baby Born, 4: Rescue Escape
-            },
+            roomReady: { imran: false, nadilla: false },
+            gameStarted: false,
+            world: { day: 1, timeMinutes: 480, stage: 1 },
             players: {
-                imran: {
-                    x: 200, y: 300,
-                    hp: 100, hunger: 100, thirst: 100, warmth: 100
-                },
-                nadilla: {
-                    x: 250, y: 300,
-                    hp: 100, hunger: 100, thirst: 100, warmth: 100
-                }
+                imran: { x: 200, y: 300, hp: 100, hunger: 100, thirst: 100, warmth: 100 },
+                nadilla: { x: 250, y: 300, hp: 100, hunger: 100, thirst: 100, warmth: 100 }
             },
-            inventory: {
-                wood: 12,
-                stone: 8,
-                berries: 5,
-                water: 3,
-                meat: 2,
-                medicine: 1
-            },
-            structures: [], // { type: 'campfire'|'shelter'|'purifier'|'trap'|'crib'|'beacon', x, y }
-            resources: [],  // Interactive objects on map
-            baby: {
-                born: false,
-                health: 100
-            }
+            inventory: { wood: 10, stone: 6, berries: 5, water: 3 },
+            structures: [],
+            resources: [],
+            baby: { born: false, health: 100 }
         };
 
-        /* ==========================================================================
-           2. AUTOMATIC ROLE DETECTION BASED ON FILENAME
-           ========================================================================== */
         window.addEventListener('DOMContentLoaded', () => {
-            const path = window.location.pathname.toLowerCase();
-            if (path.includes('imran.html')) {
-                selectCharacter('imran');
-            } else if (path.includes('nadilla.html')) {
-                selectCharacter('nadilla');
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('role')) {
+                selectRole(urlParams.get('role'));
             }
-
-            initWorldResources();
-            loadSavedState();
-            setupBroadcastListeners();
-            setupKeyboardControls();
-            
-            // Periodically sync room presence
-            setInterval(broadcastPresence, 1000);
-            
-            // Render initial lobby
-            updateLobbyUI();
+            applyRoomCode();
+            initResources();
         });
 
-        function setupBroadcastListeners() {
-            syncChannel.onmessage = (event) => {
-                const data = event.data;
-                if (!data || !data.type) return;
-
-                switch (data.type) {
-                    case 'PRESENCE_UPDATE':
-                        if (data.role === 'imran') {
-                            gameState.room.imranJoined = true;
-                            gameState.room.imranReady = data.ready;
-                        } else if (data.role === 'nadilla') {
-                            gameState.room.nadillaJoined = true;
-                            gameState.room.nadillaReady = data.ready;
-                        }
-                        updateLobbyUI();
-                        break;
-                    
-                    case 'START_GAME':
-                        gameState.room.gameStarted = true;
-                        launchGameplayUI();
-                        break;
-
-                    case 'STATE_SYNC':
-                        // Merge world state from host/other player
-                        if (data.state) {
-                            gameState.world = data.state.world;
-                            gameState.inventory = data.state.inventory;
-                            gameState.structures = data.state.structures;
-                            gameState.baby = data.state.baby;
-                            
-                            // Update other player's position & vitals
-                            if (myRole === 'imran' && data.state.players.nadilla) {
-                                gameState.players.nadilla = data.state.players.nadilla;
-                            } else if (myRole === 'nadilla' && data.state.players.imran) {
-                                gameState.players.imran = data.state.players.imran;
-                            }
-                            updateHUD();
-                        }
-                        break;
-
-                    case 'PLAYER_MOVE':
-                        if (data.role && data.role !== myRole) {
-                            gameState.players[data.role].x = data.x;
-                            gameState.players[data.role].y = data.y;
-                        }
-                        break;
-                }
-            };
+        function applyRoomCode() {
+            const inputVal = document.getElementById('roomInput').value.trim();
+            if (inputVal) roomCode = inputVal;
+            initPeer();
         }
 
-        function broadcastPresence() {
-            if (!myRole) return;
-            syncChannel.postMessage({
-                type: 'PRESENCE_UPDATE',
-                role: myRole,
-                ready: true
+        function initPeer() {
+            if (peer) peer.destroy();
+            
+            // Random prefix to allow PeerJS signal registration
+            const peerId = `${roomCode}-${myRole || 'guest'}-${Math.floor(Math.random()*1000)}`;
+            peer = new Peer(peerId);
+
+            peer.on('open', () => {
+                document.getElementById('connStatusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+                document.getElementById('connStatusText').innerText = `Terhubung ke Room: ${roomCode}`;
+                
+                // If I am Nadilla, connect to Imran peer ID pattern
+                if (myRole === 'nadilla') {
+                    connectToPeer(`${roomCode}-imran`);
+                }
+            });
+
+            peer.on('connection', (incomingConn) => {
+                conn = incomingConn;
+                setupConnectionListeners();
+            });
+
+            peer.on('error', (err) => {
+                console.log('PeerJS signal status:', err);
             });
         }
 
-        function broadcastState() {
-            syncChannel.postMessage({
-                type: 'STATE_SYNC',
-                state: gameState
+        function connectToPeer(targetId) {
+            conn = peer.connect(targetId);
+            setupConnectionListeners();
+        }
+
+        function setupConnectionListeners() {
+            conn.on('open', () => {
+                sendNetworkData({ type: 'PRESENCE', role: myRole, ready: true });
             });
-            saveStateToStorage();
+
+            conn.on('data', (data) => {
+                handleNetworkData(data);
+            });
         }
 
-        function saveStateToStorage() {
-            try {
-                localStorage.setItem('FOREST_GAME_SAVED_STATE', JSON.stringify(gameState));
-            } catch(e){}
-        }
-
-        function loadSavedState() {
-            try {
-                const saved = localStorage.getItem('FOREST_GAME_SAVED_STATE');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    // Keep resources static for consistency
-                    gameState.inventory = parsed.inventory || gameState.inventory;
-                    gameState.world = parsed.world || gameState.world;
-                    gameState.structures = parsed.structures || [];
-                    gameState.baby = parsed.baby || gameState.baby;
-                }
-            } catch(e){}
-        }
-
-        /* ==========================================================================
-           3. LOBBY & CHARACTER SELECTION LOGIC
-           ========================================================================== */
-        function selectCharacter(role) {
-            myRole = role;
-            playToneSound(440, 'sine', 0.1);
-
-            if (role === 'imran') {
-                gameState.room.imranJoined = true;
-                gameState.room.imranReady = true;
-                document.getElementById('imranRoleLabel').innerText = 'Pemain Anda';
-            } else if (role === 'nadilla') {
-                gameState.room.nadillaJoined = true;
-                gameState.room.nadillaReady = true;
-                document.getElementById('nadillaRoleLabel').innerText = 'Pemain Anda';
+        function sendNetworkData(data) {
+            if (conn && conn.open) {
+                conn.send(data);
             }
+        }
 
-            broadcastPresence();
+        function handleNetworkData(data) {
+            if (data.type === 'PRESENCE') {
+                gameState.roomReady[data.role] = data.ready;
+                updateLobbyUI();
+            } else if (data.type === 'START_GAME') {
+                gameState.gameStarted = true;
+                launchGameplay();
+            } else if (data.type === 'MOVE') {
+                if (data.role && data.role !== myRole) {
+                    gameState.players[data.role].x = data.x;
+                    gameState.players[data.role].y = data.y;
+                }
+            } else if (data.type === 'STATE_SYNC') {
+                gameState.world = data.state.world;
+                gameState.inventory = data.state.inventory;
+                gameState.structures = data.state.structures;
+                gameState.baby = data.state.baby;
+                updateHUD();
+            }
+        }
+
+        function selectRole(role) {
+            myRole = role;
+            gameState.roomReady[role] = true;
+            
+            // Try connecting to Imran if I am Nadilla, or re-init peer
+            const peerId = `${roomCode}-${role}`;
+            if (peer) peer.destroy();
+            peer = new Peer(peerId);
+
+            peer.on('open', () => {
+                document.getElementById('connStatusText').innerText = `Room Ready: ${roomCode} (${role.toUpperCase()})`;
+                if (role === 'nadilla') {
+                    connectToPeer(`${roomCode}-imran`);
+                }
+            });
+
+            peer.on('connection', (c) => {
+                conn = c;
+                setupConnectionListeners();
+            });
+
             updateLobbyUI();
         }
 
         function updateLobbyUI() {
-            const imranDot = document.getElementById('imranStatusDot');
-            const imranTxt = document.getElementById('imranStatusText');
-            const imranBtn = document.getElementById('btnJoinImran');
-
-            if (gameState.room.imranReady) {
-                imranDot.className = 'w-3 h-3 rounded-full bg-emerald-500 animate-pulse';
-                imranTxt.className = 'text-xs font-semibold text-emerald-400';
-                imranTxt.innerText = 'Siap / In Room';
-                if (myRole === 'imran') {
-                    imranBtn.className = 'px-4 py-2 bg-emerald-700 text-white font-semibold text-xs rounded-xl cursor-default';
-                    imranBtn.innerText = '✓ Anda (Imran)';
-                }
-            }
-
-            const nadillaDot = document.getElementById('nadillaStatusDot');
-            const nadillaTxt = document.getElementById('nadillaStatusText');
-            const nadillaBtn = document.getElementById('btnJoinNadilla');
-
-            if (gameState.room.nadillaReady) {
-                nadillaDot.className = 'w-3 h-3 rounded-full bg-pink-500 animate-pulse';
-                nadillaTxt.className = 'text-xs font-semibold text-pink-400';
-                nadillaTxt.innerText = 'Siap / In Room';
-                if (myRole === 'nadilla') {
-                    nadillaBtn.className = 'px-4 py-2 bg-pink-700 text-white font-semibold text-xs rounded-xl cursor-default';
-                    nadillaBtn.innerText = '✓ Anda (Nadilla)';
-                }
-            }
-
-            // Both Players Ready Check
+            const imranBadge = document.getElementById('imranStateBadge');
+            const nadillaBadge = document.getElementById('nadillaStateBadge');
             const startBtn = document.getElementById('btnStartGame');
-            const statusNotice = document.getElementById('roomStatusNotice');
+            const roomNotice = document.getElementById('roomNotice');
 
-            if (gameState.room.imranReady && gameState.room.nadillaReady) {
+            if (gameState.roomReady.imran) {
+                imranBadge.className = 'text-xs font-bold text-emerald-400';
+                imranBadge.innerText = '✓ Siap / Connected';
+            }
+            if (gameState.roomReady.nadilla) {
+                nadillaBadge.className = 'text-xs font-bold text-pink-400';
+                nadillaBadge.innerText = '✓ Siap / Connected';
+            }
+
+            if (gameState.roomReady.imran && gameState.roomReady.nadilla) {
                 startBtn.disabled = false;
-                startBtn.className = 'w-full md:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-sm rounded-xl cursor-pointer shadow-lg shadow-emerald-900/50 transition-all flex items-center justify-center gap-2 animate-bounce';
-                statusNotice.innerHTML = '<span class="text-emerald-400 font-bold">✓ Kedua Pemain Siap! Klik "Mulai Petualangan" untuk masuk hutan.</span>';
-            } else {
-                startBtn.disabled = true;
-                startBtn.className = 'w-full md:w-auto px-8 py-3.5 bg-slate-800 text-slate-500 cursor-not-allowed font-extrabold text-sm rounded-xl transition-all shadow-lg flex items-center justify-center gap-2';
+                startBtn.className = 'w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-xl cursor-pointer animate-bounce';
+                roomNotice.className = 'text-xs text-emerald-400 font-bold mt-1';
+                roomNotice.innerText = '✓ Imran & Nadilla telah terhubung! Klik "Mulai Petualangan".';
             }
         }
 
-        function startGameplay() {
-            if (!gameState.room.imranReady || !gameState.room.nadillaReady) return;
-            
-            syncChannel.postMessage({ type: 'START_GAME' });
-            launchGameplayUI();
+        function requestStartGame() {
+            sendNetworkData({ type: 'START_GAME' });
+            gameState.gameStarted = true;
+            launchGameplay();
         }
 
-        function launchGameplayUI() {
+        function launchGameplay() {
             document.getElementById('lobbySection').classList.add('hidden');
             document.getElementById('gameSection').classList.remove('hidden');
             
             initCanvas();
             startGameLoop();
             startWorldTicker();
-            playToneSound(523.25, 'triangle', 0.3); // High C sound
+            setupControls();
         }
 
-        /* ==========================================================================
-           4. GAME CANVAS ENGINE & WORLD MAP RENDERING
-           ========================================================================== */
+        // CANVAS ENGINE & GRAPHICS
         let canvas, ctx;
-        const MAP_WIDTH = 1200;
-        const MAP_HEIGHT = 800;
-
         function initCanvas() {
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
-            
-            // Set internal resolution
-            canvas.width = 1000;
-            canvas.height = 650;
+            canvas.width = 900;
+            canvas.height = 550;
         }
 
-        function initWorldResources() {
+        function initResources() {
             gameState.resources = [];
-            // Seed Trees
-            for (let i = 0; i < 25; i++) {
-                gameState.resources.push({
-                    id: 'tree_' + i,
-                    type: 'tree',
-                    x: Math.random() * (MAP_WIDTH - 100) + 50,
-                    y: Math.random() * (MAP_HEIGHT - 100) + 50,
-                    yield: 'wood'
-                });
+            for (let i = 0; i < 20; i++) {
+                gameState.resources.push({ type: 'tree', x: Math.random()*800+50, y: Math.random()*450+50 });
             }
-            // Seed Rocks
-            for (let i = 0; i < 18; i++) {
-                gameState.resources.push({
-                    id: 'rock_' + i,
-                    type: 'rock',
-                    x: Math.random() * (MAP_WIDTH - 100) + 50,
-                    y: Math.random() * (MAP_HEIGHT - 100) + 50,
-                    yield: 'stone'
-                });
-            }
-            // Seed Berry Bushes
             for (let i = 0; i < 15; i++) {
-                gameState.resources.push({
-                    id: 'bush_' + i,
-                    type: 'bush',
-                    x: Math.random() * (MAP_WIDTH - 100) + 50,
-                    y: Math.random() * (MAP_HEIGHT - 100) + 50,
-                    yield: 'berries'
-                });
+                gameState.resources.push({ type: 'rock', x: Math.random()*800+50, y: Math.random()*450+50 });
+            }
+            for (let i = 0; i < 12; i++) {
+                gameState.resources.push({ type: 'bush', x: Math.random()*800+50, y: Math.random()*450+50 });
             }
         }
 
         function startGameLoop() {
-            requestAnimationFrame(gameRenderLoop);
+            requestAnimationFrame(renderLoop);
         }
 
-        function gameRenderLoop() {
+        function renderLoop() {
             if (!ctx) return;
 
-            // Clear Background
-            ctx.fillStyle = '#1e3a1e'; // Deep Forest Grass
+            // Grass Canvas
+            ctx.fillStyle = '#1e3820';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw River
-            ctx.fillStyle = '#1b4965';
+            // River
+            ctx.fillStyle = '#154360';
             ctx.beginPath();
-            ctx.moveTo(0, 500);
-            ctx.bezierCurveTo(300, 450, 600, 580, 1000, 520);
-            ctx.lineTo(1000, 600);
-            ctx.bezierCurveTo(600, 660, 300, 530, 0, 580);
+            ctx.moveTo(0, 420);
+            ctx.quadraticCurveTo(450, 380, 900, 440);
+            ctx.lineTo(900, 500);
+            ctx.quadraticCurveTo(450, 440, 0, 500);
             ctx.closePath();
             ctx.fill();
 
-            // Render Resources
-            gameState.resources.forEach(res => {
-                if (res.type === 'tree') {
-                    // Tree Trunk & Canopy
-                    ctx.fillStyle = '#5c3d2e';
-                    ctx.fillRect(res.x - 4, res.y, 8, 14);
-                    ctx.fillStyle = '#2d6a4f';
-                    ctx.beginPath();
-                    ctx.arc(res.x, res.y - 8, 16, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (res.type === 'rock') {
-                    ctx.fillStyle = '#6c757d';
-                    ctx.beginPath();
-                    ctx.arc(res.x, res.y, 10, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (res.type === 'bush') {
-                    ctx.fillStyle = '#52b788';
-                    ctx.beginPath();
-                    ctx.arc(res.x, res.y, 10, 0, Math.PI * 2);
-                    ctx.fill();
-                    // Berries
-                    ctx.fillStyle = '#e63946';
-                    ctx.beginPath();
-                    ctx.arc(res.x - 3, res.y - 2, 3, 0, Math.PI * 2);
-                    ctx.arc(res.x + 3, res.y + 2, 3, 0, Math.PI * 2);
-                    ctx.fill();
+            // Resources
+            gameState.resources.forEach(r => {
+                if (r.type === 'tree') {
+                    ctx.fillStyle = '#512e17';
+                    ctx.fillRect(r.x - 3, r.y, 6, 12);
+                    ctx.fillStyle = '#276749';
+                    ctx.beginPath(); ctx.arc(r.x, r.y - 6, 14, 0, Math.PI*2); ctx.fill();
+                } else if (r.type === 'rock') {
+                    ctx.fillStyle = '#718096';
+                    ctx.beginPath(); ctx.arc(r.x, r.y, 8, 0, Math.PI*2); ctx.fill();
+                } else if (r.type === 'bush') {
+                    ctx.fillStyle = '#48bb78';
+                    ctx.beginPath(); ctx.arc(r.x, r.y, 8, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#e53e3e';
+                    ctx.fillRect(r.x-2, r.y-2, 4, 4);
                 }
             });
 
-            // Render Structures Built
-            gameState.structures.forEach(struct => {
-                if (struct.type === 'campfire') {
-                    ctx.fillStyle = '#ffb703';
-                    ctx.beginPath();
-                    ctx.arc(struct.x, struct.y, 12, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#fb8500';
-                    ctx.beginPath();
-                    ctx.arc(struct.x, struct.y, 6, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (struct.type === 'shelter') {
-                    ctx.fillStyle = '#7f5539';
-                    ctx.fillRect(struct.x - 25, struct.y - 20, 50, 40);
-                    ctx.fillStyle = '#b08968';
-                    ctx.beginPath();
-                    ctx.moveTo(struct.x - 30, struct.y - 20);
-                    ctx.lineTo(struct.x, struct.y - 45);
-                    ctx.lineTo(struct.x + 30, struct.y - 20);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (struct.type === 'purifier') {
-                    ctx.fillStyle = '#0077b6';
-                    ctx.fillRect(struct.x - 10, struct.y - 10, 20, 20);
-                } else if (struct.type === 'beacon') {
-                    ctx.fillStyle = '#e63946';
-                    ctx.fillRect(struct.x - 8, struct.y - 30, 16, 40);
-                    ctx.fillStyle = '#ffb703';
-                    ctx.beginPath();
-                    ctx.arc(struct.x, struct.y - 30, 10, 0, Math.PI * 2);
-                    ctx.fill();
+            // Structures
+            gameState.structures.forEach(s => {
+                if (s.type === 'campfire') {
+                    ctx.fillStyle = '#ed8936';
+                    ctx.beginPath(); ctx.arc(s.x, s.y, 10, 0, Math.PI*2); ctx.fill();
+                } else if (s.type === 'shelter') {
+                    ctx.fillStyle = '#744210';
+                    ctx.fillRect(s.x-20, s.y-15, 40, 30);
+                } else if (s.type === 'beacon') {
+                    ctx.fillStyle = '#e53e3e';
+                    ctx.fillRect(s.x-5, s.y-25, 10, 35);
                 }
             });
 
-            // Render Imran (Player 1)
+            // Imran (Blue)
             const p1 = gameState.players.imran;
-            ctx.fillStyle = '#3b82f6'; // Blue Body
-            ctx.beginPath();
-            ctx.arc(p1.x, p1.y, 14, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            // Name Tag
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Imran', p1.x, p1.y - 18);
+            ctx.fillStyle = '#3182ce';
+            ctx.beginPath(); ctx.arc(p1.x, p1.y, 12, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('Imran', p1.x, p1.y - 15);
 
-            // Render Nadilla (Player 2)
+            // Nadilla (Pink)
             const p2 = gameState.players.nadilla;
-            ctx.fillStyle = '#ec4899'; // Pink Body
-            ctx.beginPath();
-            ctx.arc(p2.x, p2.y, 14, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            // Name Tag
+            ctx.fillStyle = '#d53f8c';
+            ctx.beginPath(); ctx.arc(p2.x, p2.y, 12, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Nadilla', p2.x, p2.y - 18);
+            ctx.fillText('Nadilla', p2.x, p2.y - 15);
 
-            // Render Baby if born
+            // Baby (Purple)
             if (gameState.baby.born) {
-                const bx = (p1.x + p2.x) / 2;
-                const by = (p1.y + p2.y) / 2;
-                ctx.fillStyle = '#a855f7'; // Purple Baby
-                ctx.beginPath();
-                ctx.arc(bx, by, 8, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillText('Anak (Baby)', bx, by - 12);
+                const bx = (p1.x + p2.x)/2;
+                const by = (p1.y + p2.y)/2;
+                ctx.fillStyle = '#9f7aea';
+                ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI*2); ctx.fill();
+                ctx.fillText('Baby', bx, by - 10);
             }
 
-            // Night Overlay Filter
-            const hours = gameState.world.timeMinutes / 60;
-            if (hours < 6 || hours > 19) {
-                ctx.fillStyle = 'rgba(5, 10, 30, 0.65)';
+            // Night Overlay
+            const hrs = gameState.world.timeMinutes / 60;
+            if (hrs < 6 || hrs > 19) {
+                ctx.fillStyle = 'rgba(10, 15, 30, 0.6)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
-            requestAnimationFrame(gameRenderLoop);
+            requestAnimationFrame(renderLoop);
         }
 
-        /* ==========================================================================
-           5. KEYBOARD & PLAYER CONTROLS
-           ========================================================================== */
-        function setupKeyboardControls() {
+        // CONTROLS & MOVEMENT
+        function setupControls() {
             window.addEventListener('keydown', (e) => {
-                if (!gameState.room.gameStarted || !myRole) return;
-
-                const speed = 8;
+                if (!myRole) return;
+                const me = gameState.players[myRole];
+                const spd = 8;
                 let moved = false;
-                let me = gameState.players[myRole];
 
-                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
-                    me.y = Math.max(20, me.y - speed);
-                    moved = true;
-                }
-                if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
-                    me.y = Math.min(canvas.height - 20, me.y + speed);
-                    moved = true;
-                }
-                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-                    me.x = Math.max(20, me.x - speed);
-                    moved = true;
-                }
-                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-                    me.x = Math.min(canvas.width - 20, me.x + speed);
-                    moved = true;
-                }
-
-                if (e.key === 'e' || e.key === 'E' || e.key === ' ') {
-                    handleInteractAction();
-                }
+                if (e.key === 'ArrowUp' || e.key === 'w') { me.y = Math.max(20, me.y - spd); moved = true; }
+                if (e.key === 'ArrowDown' || e.key === 's') { me.y = Math.min(canvas.height - 20, me.y + spd); moved = true; }
+                if (e.key === 'ArrowLeft' || e.key === 'a') { me.x = Math.max(20, me.x - spd); moved = true; }
+                if (e.key === 'ArrowRight' || e.key === 'd') { me.x = Math.min(canvas.width - 20, me.x + spd); moved = true; }
+                if (e.key === 'e' || e.key === ' ') handleInteractAction();
 
                 if (moved) {
-                    syncChannel.postMessage({
-                        type: 'PLAYER_MOVE',
-                        role: myRole,
-                        x: me.x,
-                        y: me.y
-                    });
+                    sendNetworkData({ type: 'MOVE', role: myRole, x: me.x, y: me.y });
                 }
             });
         }
 
-        function handleTouchMove(dir) {
+        function handleMobileMove(dir) {
             if (!myRole) return;
-            const speed = 12;
-            let me = gameState.players[myRole];
-
-            if (dir === 'up') me.y = Math.max(20, me.y - speed);
-            if (dir === 'down') me.y = Math.min(canvas.height - 20, me.y + speed);
-            if (dir === 'left') me.x = Math.max(20, me.x - speed);
-            if (dir === 'right') me.x = Math.min(canvas.width - 20, me.x + speed);
-
-            syncChannel.postMessage({
-                type: 'PLAYER_MOVE',
-                role: myRole,
-                x: me.x,
-                y: me.y
-            });
+            const me = gameState.players[myRole];
+            const spd = 12;
+            if (dir === 'up') me.y = Math.max(20, me.y - spd);
+            if (dir === 'down') me.y = Math.min(canvas.height - 20, me.y + spd);
+            if (dir === 'left') me.x = Math.max(20, me.x - spd);
+            if (dir === 'right') me.x = Math.min(canvas.width - 20, me.x + spd);
+            sendNetworkData({ type: 'MOVE', role: myRole, x: me.x, y: me.y });
         }
 
-        /* ==========================================================================
-           6. RESOURCE HARVESTING & INTERACTION LOGIC
-           ========================================================================== */
         function handleInteractAction() {
             if (!myRole) return;
             const me = gameState.players[myRole];
-            
-            // Check interaction distance with resources
-            let harvestedIdx = -1;
-            gameState.resources.forEach((res, idx) => {
-                const dist = Math.hypot(me.x - res.x, me.y - res.y);
-                if (dist < 35) {
-                    harvestedIdx = idx;
-                    if (res.yield === 'wood') {
-                        gameState.inventory.wood += 2;
-                        playToneSound(220, 'square', 0.1);
-                    } else if (res.yield === 'stone') {
-                        gameState.inventory.stone += 2;
-                        playToneSound(330, 'square', 0.1);
-                    } else if (res.yield === 'berries') {
-                        gameState.inventory.berries += 3;
-                        playToneSound(660, 'sine', 0.1);
-                    }
+            let foundIdx = -1;
+
+            gameState.resources.forEach((r, idx) => {
+                if (Math.hypot(me.x - r.x, me.y - r.y) < 30) {
+                    foundIdx = idx;
+                    if (r.type === 'tree') gameState.inventory.wood += 2;
+                    if (r.type === 'rock') gameState.inventory.stone += 2;
+                    if (r.type === 'bush') gameState.inventory.berries += 3;
                 }
             });
 
-            if (harvestedIdx !== -1) {
-                gameState.resources.splice(harvestedIdx, 1);
+            if (foundIdx !== -1) {
+                gameState.resources.splice(foundIdx, 1);
                 updateHUD();
-                broadcastState();
-            } else {
-                // Check river water collection
-                if (me.y > 480) {
-                    gameState.inventory.water += 1;
-                    playToneSound(880, 'sine', 0.15);
-                    updateHUD();
-                    broadcastState();
-                }
+                sendNetworkData({ type: 'STATE_SYNC', state: gameState });
+            } else if (me.y > 400) {
+                gameState.inventory.water += 1;
+                updateHUD();
+                sendNetworkData({ type: 'STATE_SYNC', state: gameState });
             }
         }
 
-        /* ==========================================================================
-           7. WORLD TICKER & LIFE CYCLE (HUNGER, THIRST, STAGES)
-           ========================================================================== */
+        // TICKER & STORY PROGRESSION
         function startWorldTicker() {
             setInterval(() => {
-                if (!gameState.room.gameStarted) return;
-
-                // Time Progression
+                if (!gameState.gameStarted) return;
                 gameState.world.timeMinutes += 10;
                 if (gameState.world.timeMinutes >= 1440) {
                     gameState.world.timeMinutes = 0;
                     gameState.world.day += 1;
                 }
 
-                // Vitals Decay
                 const p1 = gameState.players.imran;
                 const p2 = gameState.players.nadilla;
-
                 p1.hunger = Math.max(0, p1.hunger - 1);
-                p1.thirst = Math.max(0, p1.thirst - 1.5);
+                p1.thirst = Math.max(0, p1.thirst - 1);
                 p2.hunger = Math.max(0, p2.hunger - 1);
-                p2.thirst = Math.max(0, p2.thirst - 1.5);
+                p2.thirst = Math.max(0, p2.thirst - 1);
 
-                // Temperature / Warmth check at night
-                const hours = gameState.world.timeMinutes / 60;
-                const isNight = (hours < 6 || hours > 19);
-                const hasNearbyCampfire = gameState.structures.some(s => s.type === 'campfire');
-
-                if (isNight && !hasNearbyCampfire) {
-                    p1.warmth = Math.max(0, p1.warmth - 2);
-                    p2.warmth = Math.max(0, p2.warmth - 2);
-                } else {
-                    p1.warmth = Math.min(100, p1.warmth + 1);
-                    p2.warmth = Math.min(100, p2.warmth + 1);
-                }
-
-                // Health Penalty if starving or freezing
-                if (p1.hunger === 0 || p1.thirst === 0 || p1.warmth === 0) p1.hp = Math.max(0, p1.hp - 2);
-                if (p2.hunger === 0 || p2.thirst === 0 || p2.warmth === 0) p2.hp = Math.max(0, p2.hp - 2);
-
-                // Animal Trap Yield Check
-                if (Math.random() < 0.2 && gameState.structures.some(s => s.type === 'trap')) {
-                    gameState.inventory.meat += 1;
-                }
-
-                // Stage Progression Logic
-                updateStoryProgression();
-
+                checkStoryProgression();
                 updateHUD();
-                broadcastState();
-
-            }, 3000); // Ticks every 3 seconds
+            }, 3000);
         }
 
-        function updateStoryProgression() {
-            const hasShelter = gameState.structures.some(s => s.type === 'shelter');
+        function checkStoryProgression() {
             const hasCampfire = gameState.structures.some(s => s.type === 'campfire');
+            const hasShelter = gameState.structures.some(s => s.type === 'shelter');
             const hasCrib = gameState.structures.some(s => s.type === 'crib');
             const hasBeacon = gameState.structures.some(s => s.type === 'beacon');
 
-            if (gameState.world.stage === 1 && hasShelter && hasCampfire) {
+            if (gameState.world.stage === 1 && hasCampfire && hasShelter) {
                 gameState.world.stage = 2;
-                document.getElementById('craftBabyCribContainer').classList.remove('hidden');
-                playToneSound(587.33, 'triangle', 0.4);
-            } else if (gameState.world.stage === 2 && hasCrib && gameState.world.day >= 2) {
+                document.getElementById('craftCribBox').classList.remove('hidden');
+            } else if (gameState.world.stage === 2 && hasCrib) {
                 gameState.world.stage = 3;
                 gameState.baby.born = true;
-                document.getElementById('babyCarePanel').classList.remove('hidden');
-                document.getElementById('craftRescueBeaconContainer').classList.remove('hidden');
-                playToneSound(659.25, 'triangle', 0.5);
+                document.getElementById('babyCareBox').classList.remove('hidden');
+                document.getElementById('craftBeaconBox').classList.remove('hidden');
             } else if (gameState.world.stage === 3 && hasBeacon) {
                 gameState.world.stage = 4;
-                showEndingScreen();
+                alert('SELAMAT! Suar Penyelamat telah aktif. Tim Penyelamat menyelamatkan Imran, Nadilla & Bayi!');
             }
         }
 
-        /* ==========================================================================
-           8. CRAFTING & ITEM USAGE
-           ========================================================================== */
-        function craftStructure(type) {
+        function craft(type) {
             const inv = gameState.inventory;
             const me = gameState.players[myRole || 'imran'];
-
             if (type === 'campfire' && inv.wood >= 5 && inv.stone >= 2) {
                 inv.wood -= 5; inv.stone -= 2;
                 gameState.structures.push({ type: 'campfire', x: me.x + 20, y: me.y });
             } else if (type === 'shelter' && inv.wood >= 20 && inv.stone >= 10) {
                 inv.wood -= 20; inv.stone -= 10;
-                gameState.structures.push({ type: 'shelter', x: me.x + 30, y: me.y });
-            } else if (type === 'purifier' && inv.stone >= 6 && inv.wood >= 4) {
-                inv.stone -= 6; inv.wood -= 4;
-                gameState.structures.push({ type: 'purifier', x: me.x + 15, y: me.y });
-            } else if (type === 'trap' && inv.wood >= 10) {
-                inv.wood -= 10;
-                gameState.structures.push({ type: 'trap', x: me.x + 15, y: me.y });
+                gameState.structures.push({ type: 'shelter', x: me.x + 25, y: me.y });
             } else if (type === 'crib' && inv.wood >= 15) {
                 inv.wood -= 15;
                 gameState.structures.push({ type: 'crib', x: me.x + 15, y: me.y });
             } else if (type === 'beacon' && inv.wood >= 30 && inv.stone >= 25) {
                 inv.wood -= 30; inv.stone -= 25;
                 gameState.structures.push({ type: 'beacon', x: me.x + 20, y: me.y });
-            } else {
-                alert('Bahan kayu / batu tidak cukup!');
-                return;
             }
-
-            playToneSound(349.23, 'square', 0.2);
             updateHUD();
-            broadcastState();
+            sendNetworkData({ type: 'STATE_SYNC', state: gameState });
         }
 
-        function consumeItem(type) {
+        function consumeItem(item) {
             if (!myRole) return;
             const me = gameState.players[myRole];
-            const inv = gameState.inventory;
-
-            if (type === 'berries' && inv.berries > 0) {
-                inv.berries--;
+            if (item === 'berries' && gameState.inventory.berries > 0) {
+                gameState.inventory.berries--;
                 me.hunger = Math.min(100, me.hunger + 15);
-            } else if (type === 'water' && inv.water > 0) {
-                inv.water--;
+            } else if (item === 'water' && gameState.inventory.water > 0) {
+                gameState.inventory.water--;
                 me.thirst = Math.min(100, me.thirst + 20);
-            } else if (type === 'meat' && inv.meat > 0) {
-                inv.meat--;
-                me.hunger = Math.min(100, me.hunger + 35);
             }
-
-            playToneSound(523.25, 'sine', 0.1);
             updateHUD();
-            broadcastState();
+            sendNetworkData({ type: 'STATE_SYNC', state: gameState });
         }
 
-        function careForBaby() {
-            if (gameState.baby.born) {
-                gameState.baby.health = Math.min(100, gameState.baby.health + 20);
-                playToneSound(783.99, 'sine', 0.2);
-                updateHUD();
-                broadcastState();
-            }
+        function careBaby() {
+            gameState.baby.health = Math.min(100, gameState.baby.health + 20);
+            updateHUD();
+            sendNetworkData({ type: 'STATE_SYNC', state: gameState });
         }
 
-        /* ==========================================================================
-           9. UI UPDATES & QUEST LOG RENDERING
-           ========================================================================== */
         function updateHUD() {
-            // Imran Vitals
             const p1 = gameState.players.imran;
             document.getElementById('imranHpText').innerText = p1.hp + '%';
             document.getElementById('imranHpBar').style.width = p1.hp + '%';
@@ -1139,7 +762,6 @@
             document.getElementById('imranWarmthText').innerText = p1.warmth + '%';
             document.getElementById('imranWarmthBar').style.width = p1.warmth + '%';
 
-            // Nadilla Vitals
             const p2 = gameState.players.nadilla;
             document.getElementById('nadillaHpText').innerText = p2.hp + '%';
             document.getElementById('nadillaHpBar').style.width = p2.hp + '%';
@@ -1150,102 +772,44 @@
             document.getElementById('nadillaWarmthText').innerText = p2.warmth + '%';
             document.getElementById('nadillaWarmthBar').style.width = p2.warmth + '%';
 
-            // World HUD
-            const hours = Math.floor(gameState.world.timeMinutes / 60);
-            const mins = gameState.world.timeMinutes % 60;
-            const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-            document.getElementById('clockDisplay').innerText = timeStr;
-            document.getElementById('dayDisplay').innerText = `Hari ke-${gameState.world.day}`;
-
-            // Inventory Counter
             document.getElementById('invWood').innerText = gameState.inventory.wood;
             document.getElementById('invStone').innerText = gameState.inventory.stone;
             document.getElementById('invBerries').innerText = gameState.inventory.berries;
             document.getElementById('invWater').innerText = gameState.inventory.water;
-            document.getElementById('invMeat').innerText = gameState.inventory.meat;
-            document.getElementById('invMedicine').innerText = gameState.inventory.medicine;
 
-            // Baby Vitals
-            if (gameState.baby.born) {
-                document.getElementById('babyHealthText').innerText = gameState.baby.health + '%';
-                document.getElementById('babyHealthBar').style.width = gameState.baby.health + '%';
+            const hrs = Math.floor(gameState.world.timeMinutes / 60);
+            const mins = gameState.world.timeMinutes % 60;
+            document.getElementById('clockDisplay').innerText = `${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+            document.getElementById('dayDisplay').innerText = `Hari ${gameState.world.day}`;
+
+            const questBox = document.getElementById('questContainer');
+            if (gameState.world.stage === 1) {
+                questBox.innerHTML = `<strong>Misi 1:</strong> Buat Api Unggun & Gubuk Kayu untuk tempat tinggal.`;
+            } else if (gameState.world.stage === 2) {
+                questBox.innerHTML = `<strong>Misi 2:</strong> Buat Ranjang Bayi untuk menyambut buah hati.`;
+            } else if (gameState.world.stage === 3) {
+                questBox.innerHTML = `<strong>Misi 3:</strong> Rawat bayi dan bangun Suar Penyelamat!`;
             }
-
-            // Quests Render
-            renderQuestLog();
         }
 
-        function renderQuestLog() {
-            const container = document.getElementById('questLogContainer');
-            const stage = gameState.world.stage;
-            let html = '';
-
-            if (stage === 1) {
-                document.getElementById('storyStageText').innerText = 'Fase 1: Tersesat & Bertahan Hidup';
-                html = `
-                    <div class="text-emerald-400 font-bold">Misi 1: Tempat Berlindung Awal</div>
-                    <p class="text-slate-400 text-[11px]">• Buat Api Unggun (Campfire)</p>
-                    <p class="text-slate-400 text-[11px]">• Buat Gubuk Kayu (Shelter)</p>
-                `;
-            } else if (stage === 2) {
-                document.getElementById('storyStageText').innerText = 'Fase 2: Membangun Kehidupan Pasangan';
-                html = `
-                    <div class="text-purple-400 font-bold">Misi 2: Persiapan Kehadiran Buah Hati</div>
-                    <p class="text-slate-400 text-[11px]">• Kumpulkan Kayu & Batu</p>
-                    <p class="text-slate-400 text-[11px]">• Buat Ranjang Bayi di menu Kerajinan</p>
-                `;
-            } else if (stage === 3) {
-                document.getElementById('storyStageText').innerText = 'Fase 3: Keluarga Berkelanjutan';
-                html = `
-                    <div class="text-pink-400 font-bold">Misi 3: Buah Hati Lahir!</div>
-                    <p class="text-slate-400 text-[11px]">• Rawat bayi bersama Nadilla & Imran</p>
-                    <p class="text-slate-400 text-[11px]">• Buat Menara Suar Penyelamat untuk keluar dari hutan!</p>
-                `;
-            }
-
-            container.innerHTML = html;
-        }
-
-        function switchSidebarTab(tab) {
-            document.getElementById('tabInvContent').classList.add('hidden');
-            document.getElementById('tabCraftContent').classList.add('hidden');
-            document.getElementById('tabStoryContent').classList.add('hidden');
-
-            document.getElementById('tabBtnInv').className = 'flex-1 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all';
-            document.getElementById('tabBtnCraft').className = 'flex-1 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all';
-            document.getElementById('tabBtnStory').className = 'flex-1 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all';
+        function switchTab(tab) {
+            document.getElementById('panelInv').classList.add('hidden');
+            document.getElementById('panelCraft').classList.add('hidden');
+            document.getElementById('panelStory').classList.add('hidden');
+            document.getElementById('btnTabInv').className = 'flex-1 py-1.5 rounded-lg text-slate-400';
+            document.getElementById('btnTabCraft').className = 'flex-1 py-1.5 rounded-lg text-slate-400';
+            document.getElementById('btnTabStory').className = 'flex-1 py-1.5 rounded-lg text-slate-400';
 
             if (tab === 'inv') {
-                document.getElementById('tabInvContent').classList.remove('hidden');
-                document.getElementById('tabBtnInv').className = 'flex-1 py-1.5 rounded-lg font-bold bg-emerald-600 text-white transition-all';
+                document.getElementById('panelInv').classList.remove('hidden');
+                document.getElementById('btnTabInv').className = 'flex-1 py-1.5 rounded-lg bg-emerald-600 text-white font-bold';
             } else if (tab === 'craft') {
-                document.getElementById('tabCraftContent').classList.remove('hidden');
-                document.getElementById('tabBtnCraft').className = 'flex-1 py-1.5 rounded-lg font-bold bg-emerald-600 text-white transition-all';
+                document.getElementById('panelCraft').classList.remove('hidden');
+                document.getElementById('btnTabCraft').className = 'flex-1 py-1.5 rounded-lg bg-emerald-600 text-white font-bold';
             } else if (tab === 'story') {
-                document.getElementById('tabStoryContent').classList.remove('hidden');
-                document.getElementById('tabBtnStory').className = 'flex-1 py-1.5 rounded-lg font-bold bg-emerald-600 text-white transition-all';
+                document.getElementById('panelStory').classList.remove('hidden');
+                document.getElementById('btnTabStory').className = 'flex-1 py-1.5 rounded-lg bg-emerald-600 text-white font-bold';
             }
-        }
-
-        /* ==========================================================================
-           10. ENDING & UTILITIES
-           ========================================================================== */
-        function showEndingScreen() {
-            alert('SELAMAT! Muhammad Dede Imran & Nadilla berhasil membuat Suar Penyelamat! Tim penyelamat menemukan keluarga kecil Anda. Anda semua berhasil keluar dari hutan dengan selamat dan hidup bahagia!');
-        }
-
-        function resetGameState() {
-            localStorage.removeItem('FOREST_GAME_SAVED_STATE');
-            location.reload();
-        }
-
-        function playToneSound(freq, type, duration) {
-            try {
-                if (window.Tone) {
-                    const synth = new Tone.Synth().toDestination();
-                    synth.triggerAttackRelease(freq, duration);
-                }
-            } catch (e) {}
         }
     </script>
 </body>
